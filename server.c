@@ -6,12 +6,17 @@
 #include <pthread.h>
 #include <signal.h>
 #include <crypt.h>
-#include <time.h>
-#include "utils.h"  
+#include <time.h> 
+#include <openssl/sha.h>
+#include <openssl/rand.h>
 
 #define PORT 8080
 #define BUFFER_SIZE 1024
 
+#define MAX_FILENAME_LEN 100
+#define MAX_USERNAME_LEN 50
+#define MAX_PASSWORD_LEN 50
+#define SALT_LEN 16
 
 typedef struct {
     int socket;
@@ -168,17 +173,91 @@ void* client_handler(void *arg) {
     return NULL;
 }
 
+int extract_user_id(const char *line) {
+    int user_id;
+    sscanf(line, "%d,", &user_id);
+    return user_id;
+}
+
 void register_user(char *username, char *password, int client_socket) {
-   
-    char *response = "User registered successfully\n";
+    int user_id = 1;
+    FILE *fp;
+    char filename[MAX_FILENAME_LEN] = "users.csv";
+    char line[256];
+    char temp_user[MAX_USERNAME_LEN];
+    char response[1024];  // Adjust buffer size as needed
+    
+    // Open CSV file for appending
+    fp = fopen(filename, "a+");
+    if (fp == NULL) {
+        perror("Error opening file");
+        return;
+    }
+
+
+    while (fscanf(fp, "%d,%[^,],%*s", &user_id, temp_user) == 2) {
+        printf("%s", temp_user);
+        if (strcmp(temp_user, username) == 0) {
+            sprintf(response, "%s sudah terdaftar\n", username);
+            write(client_socket, response, strlen(response));
+            fclose(fp);
+            return;
+        }
+    }
+
+   user_id++;
+
+    // Write new user to the CSV file
+    if (user_id == 1){
+        fprintf(fp, "%d,%s,%s,Root\n", user_id, username, password);    
+    } else {
+        fprintf(fp, "%d,%s,%s,User\n", user_id, username, password);
+    }
+
+    // Close the file
+    fclose(fp);
+
+    // Prepare response message
+    sprintf(response, "%s berhasil register\n", username);
+
+    // Send response back to client
     write(client_socket, response, strlen(response));
 }
 
 void login_user(char *username, char *password, int client_socket) {
-    
-    char *response = "User logged in successfully\n";
+    FILE *fp;
+    char filename[MAX_FILENAME_LEN] = "users.csv";
+    int found = 0;
+    int user_id;
+    char response[1024];
+    char temp_user[MAX_USERNAME_LEN];
+    char temp_password[MAX_PASSWORD_LEN];
+    char temp_role[255];
+
+    // Open CSV file for reading
+    fp = fopen(filename, "r");
+    if (fp == NULL) {
+        perror("Error opening file");
+        error_response("Internal server error", client_socket);
+        return;
+    }
+
+    // Search for the user in the file
+    while (fscanf(fp, "%d,%[^,],%[^,],%[^\n]", &user_id, temp_user, temp_password, temp_role) == 4) {
+        if (strcmp(temp_user, username) == 0 && strcmp(temp_password, password) == 0) {
+            sprintf(response, "%s berhasil login\n", username);
+            write(client_socket, response, strlen(response));
+            return;
+        }
+    }
+
+
+    sprintf(response, "Login gagal");
     write(client_socket, response, strlen(response));
+    // Close the file
+    fclose(fp);
 }
+
 
 void list_channels(int client_socket) {
     

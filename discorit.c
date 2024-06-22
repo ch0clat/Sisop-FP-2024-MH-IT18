@@ -12,6 +12,63 @@
 void register_user(int server_socket, char *username, char *password);
 void login_user(int server_socket, char *username, char *password);
 void send_command(int server_socket, char *command);
+int receive_response(int server_socket, char *buffer, size_t buffer_size);
+
+void register_user(int server_socket, char *username, char *password) {
+    char buffer[BUFFER_SIZE];
+    snprintf(buffer, sizeof(buffer), "REGISTER %s %s", username, password);
+    send_command(server_socket, buffer);
+}
+
+void login_user(int server_socket, char *username, char *password) {
+    char buffer[BUFFER_SIZE];
+    
+    snprintf(buffer, sizeof(buffer), "LOGIN %s %s", username, password);
+    send_command(server_socket, buffer);
+
+    if (receive_response(server_socket, buffer, sizeof(buffer))) {
+        if (strstr(buffer, "berhasil login") != NULL) {
+            printf("[%s] ", username);
+            while (1) {
+                if (fgets(buffer, sizeof(buffer), stdin) != NULL) {
+                    buffer[strcspn(buffer, "\n")] = 0; 
+                    if (strcmp(buffer, "exit") == 0) {
+                        break;
+                    }
+                    printf("[%s] ", username);
+                    send_command(server_socket, buffer);
+                }
+            }
+        } else {
+            printf("Login failed\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+}
+
+void send_command(int server_socket, char *command) {
+    char buffer[BUFFER_SIZE];
+    send(server_socket, command, strlen(command), 0);
+
+    int bytes_received = recv(server_socket, buffer, BUFFER_SIZE - 1, 0);
+    if (bytes_received > 0) {
+        buffer[bytes_received] = '\0';
+        printf("%s\n", buffer);
+    }
+}
+
+int receive_response(int server_socket, char *buffer, size_t buffer_size) {
+    int bytes_received = recv(server_socket, buffer, buffer_size - 1, 0);
+    if (bytes_received > 0) {
+        buffer[bytes_received] = '\0';
+        printf("%s\n", buffer);
+        return 1;
+    } else {
+        printf("Server closed the connection.\n");
+        exit(EXIT_FAILURE);
+    }
+    return 0;
+}
 
 int main(int argc, char *argv[]) {
     if (argc < 4) {
@@ -54,25 +111,3 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-void register_user(int server_socket, char *username, char *password) {
-    char buffer[BUFFER_SIZE];
-    snprintf(buffer, sizeof(buffer), "REGISTER %s %s", username, password);
-    send_command(server_socket, buffer);
-}
-
-void login_user(int server_socket, char *username, char *password) {
-    char buffer[BUFFER_SIZE];
-    snprintf(buffer, sizeof(buffer), "LOGIN %s %s", username, password);
-    send_command(server_socket, buffer);
-}
-
-void send_command(int server_socket, char *command) {
-    char buffer[BUFFER_SIZE];
-    send(server_socket, command, strlen(command), 0);
-
-    int bytes_received = recv(server_socket, buffer, BUFFER_SIZE - 1, 0);
-    if (bytes_received > 0) {
-        buffer[bytes_received] = '\0';
-        printf("%s\n", buffer);
-    }
-}
