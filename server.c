@@ -8,7 +8,6 @@
 #include <crypt.h>
 #include <time.h> 
 #include <openssl/sha.h>
-#include <openssl/rand.h>
 
 #define PORT 8080
 #define BUFFER_SIZE 1024
@@ -113,7 +112,6 @@ void* client_handler(void *arg) {
     while ((bytes_read = read(client->socket, buffer, BUFFER_SIZE - 1)) > 0) {
         buffer[bytes_read] = '\0';
 
-       
         char *command = strtok(buffer, " ");
         if (strcmp(command, "REGISTER") == 0) {
             char *username = strtok(NULL, " ");
@@ -124,6 +122,11 @@ void* client_handler(void *arg) {
             char *password = strtok(NULL, " ");
             login_user(username, password, client->socket);
         } else if (strcmp(command, "LIST") == 0) {
+            char *entity = strtok(NULL, " ");
+            if (strcmp(entity, "CHANNEL") == 0) {
+                list_channels(client->socket);
+            }
+        } else if (strcmp(command, "CREATE") == 0) {
             char *entity = strtok(NULL, " ");
             if (strcmp(entity, "CHANNEL") == 0) {
                 list_channels(client->socket);
@@ -181,11 +184,14 @@ int extract_user_id(const char *line) {
 
 void register_user(char *username, char *password, int client_socket) {
     int user_id = 1;
+    int id;
+    int found = 1;
     FILE *fp;
     char filename[MAX_FILENAME_LEN] = "users.csv";
     char line[256];
     char temp_user[MAX_USERNAME_LEN];
-    char response[1024];  // Adjust buffer size as needed
+    char response[1024];
+
     
     // Open CSV file for appending
     fp = fopen(filename, "a+");
@@ -195,21 +201,28 @@ void register_user(char *username, char *password, int client_socket) {
     }
 
 
-    while (fscanf(fp, "%d,%[^,],%*s", &user_id, temp_user) == 2) {
+    while (fscanf(fp, "%d,%[^,],%*s", &id, temp_user) == 2) {
         printf("%s", temp_user);
         if (strcmp(temp_user, username) == 0) {
             sprintf(response, "%s sudah terdaftar\n", username);
             write(client_socket, response, strlen(response));
             fclose(fp);
+            found = 0;
+        }
+        if (found == 0){
             return;
         }
     }
 
-   user_id++;
+    fseek(fp, 0, SEEK_SET);
+
+    while (fgets(line, sizeof(line), fp)) {
+        user_id = extract_user_id(line) + 1;
+    }
 
     // Write new user to the CSV file
     if (user_id == 1){
-        fprintf(fp, "%d,%s,%s,Root\n", user_id, username, password);    
+        fprintf(fp, "%d,%s,%s,Root\n", user_id, username, password);
     } else {
         fprintf(fp, "%d,%s,%s,User\n", user_id, username, password);
     }
@@ -217,10 +230,7 @@ void register_user(char *username, char *password, int client_socket) {
     // Close the file
     fclose(fp);
 
-    // Prepare response message
     sprintf(response, "%s berhasil register\n", username);
-
-    // Send response back to client
     write(client_socket, response, strlen(response));
 }
 
@@ -231,10 +241,9 @@ void login_user(char *username, char *password, int client_socket) {
     int user_id;
     char response[1024];
     char temp_user[MAX_USERNAME_LEN];
-    char temp_password[MAX_PASSWORD_LEN];
     char temp_role[255];
+    char temp_password[MAX_PASSWORD_LEN];
 
-    // Open CSV file for reading
     fp = fopen(filename, "r");
     if (fp == NULL) {
         perror("Error opening file");

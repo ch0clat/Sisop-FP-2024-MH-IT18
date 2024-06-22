@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,13 +10,14 @@
 
 void register_user(int server_socket, char *username, char *password);
 void login_user(int server_socket, char *username, char *password);
-void send_command(int server_socket, char *command);
+int send_command(int server_socket, char *command);
 int receive_response(int server_socket, char *buffer, size_t buffer_size);
 
 void register_user(int server_socket, char *username, char *password) {
     char buffer[BUFFER_SIZE];
     snprintf(buffer, sizeof(buffer), "REGISTER %s %s", username, password);
     send_command(server_socket, buffer);
+    receive_response(server_socket, buffer, sizeof(buffer));
 }
 
 void login_user(int server_socket, char *username, char *password) {
@@ -35,26 +35,19 @@ void login_user(int server_socket, char *username, char *password) {
                     if (strcmp(buffer, "exit") == 0) {
                         break;
                     }
-                    printf("[%s] ", username);
                     send_command(server_socket, buffer);
+                    receive_response(server_socket, buffer, sizeof(buffer));
+                    printf("[%s] ", username);
                 }
             }
         } else {
-            printf("Login failed\n");
             exit(EXIT_FAILURE);
         }
     }
 }
 
-void send_command(int server_socket, char *command) {
-    char buffer[BUFFER_SIZE];
+int send_command(int server_socket, char *command) {
     send(server_socket, command, strlen(command), 0);
-
-    int bytes_received = recv(server_socket, buffer, BUFFER_SIZE - 1, 0);
-    if (bytes_received > 0) {
-        buffer[bytes_received] = '\0';
-        printf("%s\n", buffer);
-    }
 }
 
 int receive_response(int server_socket, char *buffer, size_t buffer_size) {
@@ -110,4 +103,3 @@ int main(int argc, char *argv[]) {
     close(server_socket);
     return 0;
 }
-
