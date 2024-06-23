@@ -8,6 +8,9 @@
 #include <crypt.h>
 #include <time.h> 
 #include <openssl/sha.h>
+#include <sys/stat.h>
+#include <errno.h>
+#include <dirent.h>
 
 #define PORT 8080
 #define BUFFER_SIZE 1024
@@ -37,6 +40,8 @@ void error_response(char *message, int client_socket);
 void sigint_handler(int sig);
 void create_channel(char *channel, char *key, int client_socket, char *user);
 int find_user (char *username);
+void edit_channel(char *old_name, char *new_name, int client_socket);
+void delete_channel(char *channel_name, int client_socket);
 
 int main() {
     int server_socket, client_socket;
@@ -172,6 +177,20 @@ void* client_handler(void *arg) {
                 int id = atoi(strtok(NULL, " "));
                 delete_chat(command, channel, room, id, client->socket);
             }
+        } else if (strcmp(command, "EDIT") == 0) {
+            char *entity = strtok(NULL, " ");
+            if (strcmp(entity, "CHANNEL") == 0) {
+                char *old_name = strtok(NULL, " ");
+                strtok(NULL, " "); // Skip "TO"
+                char *new_name = strtok(NULL, " ");
+                edit_channel(old_name, new_name, client->socket);
+            }
+        } else if (strcmp(command, "DEL") == 0) {
+            char *entity = strtok(NULL, " ");
+            if (strcmp(entity, "CHANNEL") == 0) {
+                char *channel = strtok(NULL, " ");
+                delete_channel(channel, client->socket);
+            }
         } else if (strcmp(command, "EXIT") == 0) {
             break;
         } else {
@@ -306,6 +325,7 @@ void channel_auth() {
 
 void create_channel(char *channel, char *key, int client_socket, char *user) {
     FILE *fp;
+    
     char filename[MAX_FILENAME_LEN] = "channels.csv";
     char line[256];
     char temp_channel[MAX_FILENAME_LEN];
@@ -386,6 +406,104 @@ void create_channel(char *channel, char *key, int client_socket, char *user) {
     sprintf(response, "Channel %s dibuat\n", channel);
     write(client_socket, response, strlen(response));
     }
+
+// int remove_directory(const char *path) {
+//     DIR *d = opendir(path);
+//     size_t path_len = strlen(path);
+//     int r = -1;
+
+//     if (d) {
+//         struct dirent *p;
+
+//         r = 0;
+
+//         while (!r && (p = readdir(d))) {
+//             int r2 = -1;
+//             char *buf;
+//             size_t len;
+
+//             // Skip "." and ".." directories
+//             if (!strcmp(p->d_name, ".") || !strcmp(p->d_name, "..")) {
+//                 continue;
+//             }
+
+//             len = path_len + strlen(p->d_name) + 2; 
+//             buf = malloc(len);
+
+//             if (buf) {
+//                 struct stat statbuf;
+
+//                 snprintf(buf, len, "%s/%s", path, p->d_name);
+
+//                 if (!stat(buf, &statbuf)) {
+//                     if (S_ISDIR(statbuf.st_mode)) {
+//                         r2 = remove_directory(buf);
+//                     } else {
+//                         r2 = unlink(buf);
+//                     }
+//                 }
+
+//                 free(buf);
+//             }
+
+//             r = r2;
+//         }
+
+//         closedir(d);
+//     }
+
+//     if (!r) {
+//         r = rmdir(path);
+//     }
+
+//     return r;
+// }
+
+void edit_channel(char *old_name, char *new_name, int client_socket) {
+    char old_path[MAX_FILENAME_LEN];
+    char new_path[MAX_FILENAME_LEN];
+    char response[1024];
+
+    snprintf(old_path, sizeof(old_path), "%s", old_name);
+    snprintf(new_path, sizeof(new_path), "%s", new_name);
+
+    struct stat st = {0};
+    if (stat(old_path, &st) == 0) {
+        if (stat(new_path, &st) == -1) {
+            if (rename(old_path, new_path) == -1) {
+                perror("rename");
+                error_response("Failed to rename channel", client_socket);
+                return;
+            }
+            snprintf(response, sizeof(response), "Channel %s berhasil diubah menjadi %s\n", old_name, new_name);
+        } else {
+            snprintf(response, sizeof(response), "Channel %s sudah ada\n", new_name);
+        }
+    } else {
+        snprintf(response, sizeof(response), "Channel %s tidak ada\n", old_name);
+    }
+    write(client_socket, response, strlen(response));
+
+}
+
+void delete_channel(char *channel_name, int client_socket) {
+    char channel_path[MAX_FILENAME_LEN];
+    char response[1024];
+
+    snprintf(channel_path, sizeof(channel_path), "%s",  channel_name);
+
+    struct stat st = {0};
+    if (stat(channel_path, &st) == 0) {
+        char command[MAX_FILENAME_LEN];
+        snprintf(command, sizeof(command), "rm -r %s", channel_path);
+        system(command);
+
+        snprintf(response, sizeof(response), "Channel %s berhasil dihapus\n", channel_name);
+    } else {
+        snprintf(response, sizeof(response), "Channel %s tidak ada\n", channel_name);
+    }
+    write(client_socket, response, strlen(response));
+}
 
 
 void list_channels(int client_socket) {

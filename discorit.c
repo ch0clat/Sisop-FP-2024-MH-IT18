@@ -44,6 +44,20 @@ void login_user(int server_socket, char *username, char *password) {
 
                         send_command(server_socket, buffer);
                         }
+                    } else if (strstr("EDIT", buffer) == 0){
+                        if (strstr("CHANNEL", buffer) == 0){
+                        char *old_channel = strtok(buffer + 13, " ");
+                        strtok(NULL, " ");
+                        char *new_channel = strtok(NULL, " ");
+                        snprintf(buffer, sizeof(buffer), "EDIT CHANNEL %s %s", old_channel, new_channel);
+                        send_command(server_socket, buffer); 
+                        }
+                    } else if (strstr("DEL", buffer) == 0){
+                        if (strstr("CHANNEL", buffer) == 0){
+                        char *channel_name = buffer + 12;
+                        snprintf(buffer, sizeof(buffer), "DEL CHANNEL %s", channel_name);
+                        send_command(server_socket, buffer);
+                        }
                     }
                     // printf("%s", buffer);
                     receive_response(server_socket, buffer, sizeof(buffer));
