@@ -112,7 +112,7 @@ int main() {
 }
 
 void* client_handler(void *arg) {
-    printf("Listening");
+    printf("Listening\n");
     client_t *client = (client_t *)arg;
     char buffer[BUFFER_SIZE];
     int bytes_read;
@@ -133,6 +133,8 @@ void* client_handler(void *arg) {
             char *entity = strtok(NULL, " ");
             if (strcmp(entity, "CHANNEL") == 0) {
                 list_channels(client->socket);
+            } else if (strcmp(entity, "USER") == 0) {
+                list_users(client->socket);
             }
         } else if (strcmp(command, "CREATE") == 0) {
             char *entity = strtok(NULL, " ");
@@ -168,6 +170,11 @@ void* client_handler(void *arg) {
                 int id = atoi(strtok(NULL, " "));
                 char *new_message = strtok(NULL, "\n");
                 edit_chat(command, channel, room, id, new_message, client->socket);
+            } else if (strcmp(entity, "CHANNEL") == 0) {
+                char *old_name = strtok(NULL, " ");
+                strtok(NULL, " "); // Skip "TO"
+                char *new_name = strtok(NULL, " ");
+                edit_channel(old_name, new_name, client->socket);
             }
         } else if (strcmp(command, "DEL") == 0) {
             char *entity = strtok(NULL, " ");
@@ -176,18 +183,7 @@ void* client_handler(void *arg) {
                 char *room = strtok(NULL, " ");
                 int id = atoi(strtok(NULL, " "));
                 delete_chat(command, channel, room, id, client->socket);
-            }
-        } else if (strcmp(command, "EDIT") == 0) {
-            char *entity = strtok(NULL, " ");
-            if (strcmp(entity, "CHANNEL") == 0) {
-                char *old_name = strtok(NULL, " ");
-                strtok(NULL, " "); // Skip "TO"
-                char *new_name = strtok(NULL, " ");
-                edit_channel(old_name, new_name, client->socket);
-            }
-        } else if (strcmp(command, "DEL") == 0) {
-            char *entity = strtok(NULL, " ");
-            if (strcmp(entity, "CHANNEL") == 0) {
+            } else if (strcmp(entity, "CHANNEL") == 0) {
                 char *channel = strtok(NULL, " ");
                 delete_channel(channel, client->socket);
             }
@@ -202,6 +198,7 @@ void* client_handler(void *arg) {
     free(client);
     return NULL;
 }
+
 
 int extract_id(const char *line) {
     int user_id;
@@ -505,12 +502,55 @@ void delete_channel(char *channel_name, int client_socket) {
     write(client_socket, response, strlen(response));
 }
 
+void list_users(int client_socket) {
+    FILE *fp;
+    char filename[MAX_FILENAME_LEN] = "users.csv";
+    char line[BUFFER_SIZE];
+    char response[BUFFER_SIZE] = "Users: ";
 
-void list_channels(int client_socket) {
-    
-    char *response = "Listing channels...\n";
+    fp = fopen(filename, "r");
+    if (fp == NULL) {
+        perror("Error opening file");
+        error_response("Internal server error\n", client_socket);
+        return;
+    }
+
+    while (fgets(line, sizeof(line), fp) != NULL) {
+        char *id = strtok(line, ",");
+        char *username = strtok(NULL, ",");
+        strcat(response, username);
+        strcat(response, " ");
+    }
+    fclose(fp);
+
+    strcat(response, "\n");
     write(client_socket, response, strlen(response));
 }
+
+void list_channels(int client_socket) {
+    FILE *fp;
+    char filename[MAX_FILENAME_LEN] = "channels.csv";
+    char line[BUFFER_SIZE];
+    char response[BUFFER_SIZE] = "Channels: ";
+
+    fp = fopen(filename, "r");
+    if (fp == NULL) {
+        perror("Error opening file");
+        error_response("Internal server error\n", client_socket);
+        return;
+    }
+
+    while (fgets(line, sizeof(line), fp) != NULL) {
+        char *channel = strtok(line, ",");
+        strcat(response, channel);
+        strcat(response, " ");
+    }
+    fclose(fp);
+
+    strcat(response, "\n");
+    write(client_socket, response, strlen(response));
+}
+
 
 void join_channel(char *username, char *channel, char *key, int client_socket) {
     
