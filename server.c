@@ -35,6 +35,8 @@ void edit_chat(char *username, char *channel, char *room, int id, char *new_mess
 void delete_chat(char *username, char *channel, char *room, int id, int client_socket);
 void error_response(char *message, int client_socket);
 void sigint_handler(int sig);
+void create_channel(char *channel, char *key, int client_socket, char *user);
+int find_user (char *username);
 
 int main() {
     int server_socket, client_socket;
@@ -105,6 +107,7 @@ int main() {
 }
 
 void* client_handler(void *arg) {
+    printf("Listening");
     client_t *client = (client_t *)arg;
     char buffer[BUFFER_SIZE];
     int bytes_read;
@@ -129,7 +132,12 @@ void* client_handler(void *arg) {
         } else if (strcmp(command, "CREATE") == 0) {
             char *entity = strtok(NULL, " ");
             if (strcmp(entity, "CHANNEL") == 0) {
-                list_channels(client->socket);
+                char *channel = strtok(NULL, " ");
+                strtok(NULL, " "); // Skip the "-k"
+                char *key = strtok(NULL, " ");
+                char *user = strtok(NULL, " ");
+                printf("%s", user);
+                create_channel(channel, key, client->socket, user);
             }
         } else if (strcmp(command, "JOIN") == 0) {
             char *channel = strtok(NULL, " ");
@@ -167,7 +175,7 @@ void* client_handler(void *arg) {
         } else if (strcmp(command, "EXIT") == 0) {
             break;
         } else {
-            error_response("Unknown command", client->socket);
+            error_response("Unknown command\n", client->socket);
         }
     }
 
@@ -176,7 +184,7 @@ void* client_handler(void *arg) {
     return NULL;
 }
 
-int extract_user_id(const char *line) {
+int extract_id(const char *line) {
     int user_id;
     sscanf(line, "%d,", &user_id);
     return user_id;
@@ -217,7 +225,7 @@ void register_user(char *username, char *password, int client_socket) {
     fseek(fp, 0, SEEK_SET);
 
     while (fgets(line, sizeof(line), fp)) {
-        user_id = extract_user_id(line) + 1;
+        user_id = extract_id(line) + 1;
     }
 
     // Write new user to the CSV file
@@ -266,6 +274,118 @@ void login_user(char *username, char *password, int client_socket) {
     // Close the file
     fclose(fp);
 }
+
+int find_user (char *username){
+    int id;
+    int temp_id;
+    char *temp_user;
+    FILE *fp;
+    char filename[MAX_FILENAME_LEN] = "users.csv";
+
+    fp = fopen(filename, "r");
+    if (fp == NULL) {
+        perror("Error opening file");
+        return 0;
+    }
+
+    while (fscanf(fp, "%d,%[^,],%*s", &temp_id, temp_user) == 2) {
+        if (strcmp(temp_user, username) == 0) {
+            id = temp_id;
+            fclose(fp);
+            return id;
+        }
+    }
+
+    fclose(fp);
+    return 0;
+}
+
+void channel_auth() {
+
+}
+
+void create_channel(char *channel, char *key, int client_socket, char *user) {
+    FILE *fp;
+    char filename[MAX_FILENAME_LEN] = "channels.csv";
+    char line[256];
+    char temp_channel[MAX_FILENAME_LEN];
+    char response[BUFFER_SIZE];
+    char channel_path[MAX_FILENAME_LEN];
+    int channel_id;
+
+    // Open CSV file for appending
+    fp = fopen(filename, "a+");
+    if (fp == NULL) {
+        perror("Error opening file");
+        error_response("Internal server error", client_socket);
+        return;
+    }
+
+    // Check if the channel already exists in channels.csv
+    while (fgets(line, sizeof(line), fp) != NULL) {
+        sscanf(line, "%[^,],%*s", temp_channel);
+        if (strcmp(temp_channel, channel) == 0) {
+            sprintf(response, "Channel %s sudah ada\n", channel);
+            write(client_socket, response, strlen(response));
+            fclose(fp);
+            return;
+        }
+    }
+
+    // Close the file and reopen for writing
+    fclose(fp);
+
+    // Create directory for the new channel
+    snprintf(channel_path, sizeof(channel_path), "%s", channel);
+    if (mkdir(channel_path, 0777) == -1) {
+        perror("mkdir");
+        error_response("Failed to create channel", client_socket);
+        return;
+    }
+
+    // Create admin directory and auth.csv for the channel
+    char admin_path[MAX_FILENAME_LEN];
+    snprintf(admin_path, sizeof(admin_path), "%s/admin", channel_path);
+    if (mkdir(admin_path, 0777) == -1) {
+        perror("mkdir");
+        error_response("Failed to create admin directory", client_socket);
+        return;
+    }
+
+    char auth_path[MAX_FILENAME_LEN];
+    snprintf(auth_path, sizeof(auth_path), "%s/auth.csv", admin_path);
+    fp = fopen(auth_path, "w");
+    if (fp == NULL) {
+        perror("fopen");
+        error_response("Failed to create auth.csv", client_socket);
+        return;
+    }
+
+    // Find user id
+    int id = find_user(user);
+
+    // Write user information to auth.csv
+    fprintf(fp, "%d,%s,ADMIN\n", id, user);
+    fclose(fp);
+
+    // Append new channel to channels.csv
+    fp = fopen(filename, "a+");
+    if (fp == NULL) {
+        perror("fopen");
+        error_response("Failed to append to channels.csv", client_socket);
+        return;
+    }
+
+    while (fgets(line, sizeof(line), fp)) {
+        channel_id = extract_id(line) + 1;
+    }
+
+    fprintf(fp, "%d,%s,%s\n", channel_id,channel, key);
+    fclose(fp);
+
+    sprintf(response, "Channel %s dibuat\n", channel);
+    write(client_socket, response, strlen(response));
+    }
 
 
 void list_channels(int client_socket) {

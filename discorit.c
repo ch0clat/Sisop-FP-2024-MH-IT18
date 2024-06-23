@@ -34,8 +34,18 @@ void login_user(int server_socket, char *username, char *password) {
                     buffer[strcspn(buffer, "\n")] = 0; 
                     if (strcmp(buffer, "exit") == 0) {
                         break;
+                    } else if (strstr("CREATE", buffer) == 0){
+                        if (strstr("CHANNEL", buffer) == 0){
+                            char *channel_name_key = buffer + strlen("CREATE CHANNEL ");
+                            char key[BUFFER_SIZE];
+                            snprintf(buffer, sizeof(buffer), "CREATE CHANNEL %s %s", channel_name_key, username);
+                        send_command(server_socket, buffer);    
+                        } else if ("ROOM"){
+
+                        send_command(server_socket, buffer);
+                        }
                     }
-                    send_command(server_socket, buffer);
+                    // printf("%s", buffer);
                     receive_response(server_socket, buffer, sizeof(buffer));
                     printf("[%s] ", username);
                 }
@@ -54,7 +64,7 @@ int receive_response(int server_socket, char *buffer, size_t buffer_size) {
     int bytes_received = recv(server_socket, buffer, buffer_size - 1, 0);
     if (bytes_received > 0) {
         buffer[bytes_received] = '\0';
-        printf("%s\n", buffer);
+        printf("%s", buffer);
         return 1;
     } else {
         printf("Server closed the connection.\n");
