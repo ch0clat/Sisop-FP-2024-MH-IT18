@@ -28,38 +28,32 @@ void login_user(int server_socket, char *username, char *password) {
 
     if (receive_response(server_socket, buffer, sizeof(buffer))) {
         if (strstr(buffer, "berhasil login") != NULL) {
-            printf("[%s] ", username);
+            printf("%s\n[%s] ", buffer, username);
             while (1) {
-                if (fgets(buffer, sizeof(buffer), stdin) != NULL) {
-                    buffer[strcspn(buffer, "\n")] = 0; 
-                    if (strcmp(buffer, "exit") == 0) {
+                char input_buffer[BUFFER_SIZE];
+                if (fgets(input_buffer, sizeof(input_buffer), stdin) != NULL) {
+                    input_buffer[strcspn(input_buffer, "\n")] = 0; 
+                    if (strcmp(input_buffer, "exit") == 0) {
                         break;
-                    } else if (strstr("CREATE", buffer) == 0){
-                        if (strstr("CHANNEL", buffer) == 0){
-                            char *channel_name_key = buffer + strlen("CREATE CHANNEL ");
-                            char key[BUFFER_SIZE];
-                            snprintf(buffer, sizeof(buffer), "CREATE CHANNEL %s %s", channel_name_key, username);
-                        send_command(server_socket, buffer);    
-                        } else if ("ROOM"){
-
+                    } else if (strncmp(input_buffer, "CREATE CHANNEL", 14) == 0) {
+                        char *channel_name_key = input_buffer + strlen("CREATE CHANNEL ");
+                        snprintf(buffer, sizeof(buffer), "CREATE CHANNEL %s %s", channel_name_key, username);
                         send_command(server_socket, buffer);
-                        }
-                    } else if (strstr("EDIT", buffer) == 0){
-                        if (strstr("CHANNEL", buffer) == 0){
-                        char *old_channel = strtok(buffer + 13, " ");
+                    } else if (strncmp(input_buffer, "EDIT CHANNEL", 12) == 0) {
+                        char *old_channel = strtok(input_buffer + 13, " ");
                         strtok(NULL, " ");
                         char *new_channel = strtok(NULL, " ");
                         snprintf(buffer, sizeof(buffer), "EDIT CHANNEL %s %s", old_channel, new_channel);
                         send_command(server_socket, buffer); 
-                        }
-                    } else if (strstr("DEL", buffer) == 0){
-                        if (strstr("CHANNEL", buffer) == 0){
-                        char *channel_name = buffer + 12;
+                    } else if (strncmp(input_buffer, "DEL CHANNEL", 11) == 0) {
+                        char *channel_name = input_buffer + 12;
                         snprintf(buffer, sizeof(buffer), "DEL CHANNEL %s", channel_name);
                         send_command(server_socket, buffer);
-                        }
+                    } else if (strncmp(input_buffer, "LIST CHANNEL", 12) == 0) {
+                        send_command(server_socket, input_buffer);
                     }
-                    // printf("%s", buffer);
+                    // Clear the buffer before receiving the response
+                    memset(buffer, 0, sizeof(buffer));
                     receive_response(server_socket, buffer, sizeof(buffer));
                     printf("[%s] ", username);
                 }
@@ -72,6 +66,7 @@ void login_user(int server_socket, char *username, char *password) {
 
 int send_command(int server_socket, char *command) {
     send(server_socket, command, strlen(command), 0);
+    return 0; // Return a value to avoid compiler warning
 }
 
 int receive_response(int server_socket, char *buffer, size_t buffer_size) {
