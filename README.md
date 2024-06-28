@@ -1,4 +1,4 @@
-![image](https://github.com/ch0clat/Sisop-FP-2024-MH-IT18/assets/128571877/4a6f1a89-0b89-4964-9682-1ccd84ea656c)# Sisop-FP-2024-MH-IT18
+# Sisop-FP-2024-MH-IT18
 
 ## Anggota kelompok
    ### Callista Meyra Azizah 5027231060
@@ -1037,11 +1037,11 @@ A. Autentikasi (Register dan Login)
 B. Penggunaan DiscorIT
 1. List Channel dan Room
 ![image](https://github.com/ch0clat/Sisop-FP-2024-MH-IT18/assets/151893499/d77fe60a-23ea-4ee6-8a89-2bd1cc0a142e)
-(masukin gambar list room)
+
 3. Akses Channel dan Room
-(masukin gambar)
+
 4. Fitur Chat
-(masukin gambar)
+
 
 C. Root
 Akun yang pertama kali mendaftar otomatis mendapatkan peran "root".
@@ -1063,39 +1063,40 @@ CREATE CHANNEL
 ![image](https://github.com/ch0clat/Sisop-FP-2024-MH-IT18/assets/151893499/884db7d7-eaeb-4cf5-b863-68a31a99af03)
 
 EDIT CHANNEL
-(masukin gambar)
+
 DELETE CHANNEL
-(masukin gambar)
+
 3. Room
 Semua perubahan dan aktivitas user pada room dicatat dalam file users.log.
 CREATE ROOM
-(masukin gambar)
+
 EDIT ROOM
-(masukin gambar)
+
 DELETE ROOM
-(masukin gambar)
+
 4. Ban 
 Admin dapat melakukan ban pada user yang nakal. Aktivitas ban tercatat pada users.log. Ketika di ban, role "user" berubah menjadi "banned". Data tetap tersimpan dan user tidak dapat masuk ke dalam channel.
-(masukin gambar)
+
 5. Unban 
 Admin dapat melakukan unban pada user yang sudah berperilaku baik. Aktivitas unban tercatat pada users.log. Ketika di unban, role "banned" berubah kembali menjadi "user" dan dapat masuk ke dalam channel.
-(masukin gambar)
+
 6. Remove user
 Admin dapat remove user dan tercatat pada users.log.
-(masukin gambar)
+
 E. User
 User dapat mengubah informasi profil mereka, user yang di ban tidak dapat masuk kedalam channel dan dapat keluar dari room, channel, atau keluar sepenuhnya dari DiscorIT.
 1. Edit User Username
-(masukin gambar)
+
 2. Edit User Password
-(masukin gambar)
+
 3. Banned User
-(masukin gambar)
+
 4. Exit
-(masukin gambar)
+
 
 F. Error Handling
 Jika ada command yang tidak sesuai penggunaannya. Maka akan mengeluarkan pesan error dan tanpa keluar dari program client.
+![image](https://github.com/ch0clat/Sisop-FP-2024-MH-IT18/assets/128571877/4a6f1a89-0b89-4964-9682-1ccd84ea656c)
 
 ![image](https://github.com/ch0clat/Sisop-FP-2024-MH-IT18/assets/128571877/2cd3d326-56ca-4f0c-afd8-7c8e42fc60ca)
 
