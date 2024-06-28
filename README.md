@@ -1,4 +1,4 @@
-# Sisop-FP-2024-MH-IT18
+![image](https://github.com/ch0clat/Sisop-FP-2024-MH-IT18/assets/128571877/4a6f1a89-0b89-4964-9682-1ccd84ea656c)# Sisop-FP-2024-MH-IT18
 
 ## Anggota kelompok
    ### Callista Meyra Azizah 5027231060
@@ -1096,13 +1096,16 @@ User dapat mengubah informasi profil mereka, user yang di ban tidak dapat masuk 
 
 F. Error Handling
 Jika ada command yang tidak sesuai penggunaannya. Maka akan mengeluarkan pesan error dan tanpa keluar dari program client.
-(masukin gambar)
+
+![image](https://github.com/ch0clat/Sisop-FP-2024-MH-IT18/assets/128571877/2cd3d326-56ca-4f0c-afd8-7c8e42fc60ca)
+
+![image](https://github.com/ch0clat/Sisop-FP-2024-MH-IT18/assets/128571877/ff9421dd-97fa-4c6b-b5dd-4595f1385b81)
+
 
 G. Monitor
 User dapat menampilkan isi chat secara real-time menggunakan program monitor. Jika ada perubahan pada isi chat, perubahan tersebut akan langsung ditampilkan di terminal.
 Sebelum dapat menggunakan monitor, pengguna harus login terlebih dahulu dengan cara yang mirip seperti login di DiscorIT.
 Untuk keluar dari room dan menghentikan program monitor dengan perintah "EXIT".
 Monitor dapat digunakan untuk menampilkan semua chat pada room, mulai dari chat pertama hingga chat yang akan datang nantinya.
-(masukin gambar list room)
 
 
